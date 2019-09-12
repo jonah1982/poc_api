@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+
+<project name="api_deploy" default="main" basedir=".">
+
+	<echo message="load property files"/>
+	<property file="build.properties"/>
+
+	<echo message="building for server ${webapp.dir} for ${env}"/>
+	
+	<property name="lib.dir" value="${svn.dir}/lib"/>
+	<property name="config.dir" value="${svn.dir}/web-config"/>
+	<property name="dest.dir" value="${webapp.dir}/api/WEB-INF"/>
+	<property name="war.file" value="${webapp.dir}/model.war"/>
+	
+	<target name="init">
+		<tstamp>
+	        <format property="current.time"
+	            pattern="yyyyMMdd_HHmmss" />
+	    </tstamp>
+	    <echo>build release for: ${current.time}</echo>
+	</target>
+	
+	<target name="clean" depends="init">
+		<delete dir="${webapp.dir}/api" />
+		<delete file="${war.file}" />
+		<mkdir dir="${dest.dir}" />
+	</target>
+	
+	<target name="config" depends="clean">
+		<echo message="copy configuration from ${config.dir} to dest.dir"/>
+		<copy file="${config.dir}/classes/log4j.properties" tofile="${dest.dir}/classes/log4j.properties" />
+		<copy file="${config.dir}/classes/setting.properties" tofile="${dest.dir}/classes/setting.properties" />
+	</target>
+	
+	<target name="compile" depends="config">
+		<javac srcdir="${svn.dir}/src" destdir="${dest.dir}/classes" target="1.7">
+			<classpath refid="classpath.base" />
+		</javac>
+	</target>
+	
+	<path id="classpath.base">                                                                                                                           
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	
+	<target name="move" depends="compile">
+		<copy todir="${dest.dir}/classes" verbose="true">  
+			<fileset dir="${svn.dir}/src"   
+				excludes="**/*.java"/>  
+		</copy> 
+	</target>
+	
+	<target name="lib" depends="move">
+		<echo message="copy libs from ${lib.dir} to ${dest.dir}/lib"/>
+		<copy todir="${dest.dir}/lib">
+			<fileset dir="${lib.dir}">
+				<include name="*.jar"/>
+				<not>
+					<filename name="servlet-api.jar"/>
+				</not>
+			</fileset>
+		</copy>
+	</target> 
+	
+	<target name="war" depends="lib"> 
+		<war warfile="${war.file}" webxml="${config.dir}/web.xml"> 
+			<lib dir="${dest.dir}/lib"/>
+			<classes dir = "${dest.dir}/classes"/>
+		</war> 
+		<delete dir="${webapp.dir}/api" />
+	</target>
+	
+	<target name="main">
+		<antcall target="war"/>
+	</target>
+  
+</project>
